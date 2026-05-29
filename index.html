@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>テスト教材</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #fff7dc;
+      padding: 40px;
+    }
+    h1 {
+      font-size: 40px;
+    }
+    button {
+      font-size: 32px;
+      padding: 20px 40px;
+      border-radius: 20px;
+    }
+    #text {
+      font-size: 36px;
+      margin-top: 30px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>さんすうアプリ テスト</h1>
+  <button onclick="countUp()">りんごを入れる</button>
+  <div id="text">0こ</div>
+
+  <script>
+    let count = 0;
+    function countUp() {
+      count++;
+      document.getElementById("text").textContent = count + "こ";
+    }
+  </script>
+</body>
+</html>
