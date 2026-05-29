@@ -198,10 +198,63 @@
     let isHidden = false;
     let moveTimer = null;
 
+    /* 音声ファイルなしで効果音を作る設定 */
+    let audioCtx = null;
+
+    function unlockAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+    }
+
+    function playTone(frequency, duration, type = "sine", volume = 0.14) {
+      if (!audioCtx) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = type;
+      osc.frequency.value = frequency;
+
+      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playStartSound() {
+      // ピピッ
+      playTone(880, 0.08, "sine", 0.12);
+
+      setTimeout(() => {
+        playTone(1100, 0.08, "sine", 0.12);
+      }, 100);
+    }
+
+    function playCorrectSound() {
+      // ピンポン
+      playTone(880, 0.14, "sine", 0.15);
+
+      setTimeout(() => {
+        playTone(660, 0.22, "sine", 0.15);
+      }, 150);
+    }
+
     target.addEventListener("click", startGame);
 
     function startGame() {
       if (isMoving || isHidden) return;
+
+      unlockAudio();
+      playStartSound();
 
       resultMark.classList.remove("show");
       resetHotspot.classList.remove("active");
@@ -268,6 +321,8 @@
     function openObstacle(index) {
       if (!isHidden || isMoving) return;
 
+      unlockAudio();
+
       const ob = obstacles[index];
       const obRect = ob.getBoundingClientRect();
       const gameRect = game.getBoundingClientRect();
@@ -283,6 +338,7 @@
         target.style.opacity = "1";
 
         resultMark.classList.add("show");
+        playCorrectSound();
 
         isHidden = false;
         target.style.pointerEvents = "auto";
