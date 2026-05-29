@@ -33,54 +33,28 @@
 
     body {
       display: flex;
-      flex-direction: column;
       align-items: center;
-    }
-
-    header {
-      width: 100%;
-      padding: 8px 12px 2px;
-      text-align: center;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(54px, 8.5vw, 104px);
-      letter-spacing: 0.12em;
-      line-height: 1.02;
-    }
-
-    #message {
-      margin-top: 4px;
-      min-height: 62px;
-      font-size: clamp(36px, 5.4vw, 64px);
-      font-weight: bold;
-      color: #333;
-      line-height: 1.1;
-    }
-
-    #message.correct {
-      color: #e53935;
+      justify-content: center;
+      padding: 8px;
     }
 
     #game {
       position: relative;
-      width: min(98vw, calc(78vh * 16 / 9), 1360px);
-      aspect-ratio: 16 / 9;
+      height: min(98vh, calc(98vw * 4 / 3));
+      aspect-ratio: 3 / 4;
       background: #fffdf2;
-      border: 8px solid #ffd166;
-      border-radius: 32px;
+      border: 10px solid #ffd166;
+      border-radius: 34px;
       box-shadow: 0 9px 0 rgba(0,0,0,0.15);
       overflow: hidden;
-      margin-top: 2px;
     }
 
     #resultMark {
       position: absolute;
       left: 50%;
-      top: 31%;
+      top: 32%;
       transform: translate(-50%, -50%);
-      font-size: clamp(220px, 32vw, 430px);
+      font-size: clamp(180px, 52vw, 390px);
       line-height: 1;
       z-index: 30;
       display: none;
@@ -95,17 +69,17 @@
     #target {
       position: absolute;
       left: 50%;
-      top: 16%;
+      top: 15%;
       transform: translate(-50%, -50%);
-      width: clamp(92px, 12vw, 160px);
-      height: clamp(92px, 12vw, 160px);
+      width: clamp(90px, 19vw, 155px);
+      height: clamp(90px, 19vw, 155px);
       border-radius: 50%;
       background: #ffef99;
       border: 5px solid #f4a261;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(58px, 8.5vw, 112px);
+      font-size: clamp(58px, 13vw, 110px);
       box-shadow: 0 8px 0 rgba(0,0,0,0.18);
       z-index: 5;
       cursor: pointer;
@@ -121,7 +95,7 @@
     .obstacle {
       position: absolute;
       bottom: 6%;
-      width: 22%;
+      width: 27%;
       aspect-ratio: 1 / 1;
       border: 0;
       background: transparent;
@@ -137,9 +111,9 @@
       transform: translateY(5px);
     }
 
-    #ob0 { left: 8%; }
-    #ob1 { left: 39%; }
-    #ob2 { left: 70%; }
+    #ob0 { left: 4.5%; }
+    #ob1 { left: 36.5%; }
+    #ob2 { left: 68.5%; }
 
     .shapeSvg {
       width: 100%;
@@ -159,44 +133,27 @@
       pointer-events: none;
     }
 
-    #controls {
-      width: min(98vw, 1360px);
-      display: flex;
-      justify-content: center;
-      margin-top: 8px;
-      min-height: 78px;
-    }
-
-    button.control {
-      display: none;
+    /* 正解後だけ有効になる、右上の見えないリセットエリア */
+    #resetHotspot {
+      position: fixed;
+      right: 0;
+      top: 0;
+      width: 180px;
+      height: 180px;
       border: 0;
-      border-radius: 22px;
-      padding: 14px 52px;
-      font-size: clamp(32px, 5vw, 56px);
-      font-weight: bold;
-      background: #b7e4c7;
-      color: #222;
-      box-shadow: 0 6px 0 rgba(0,0,0,0.18);
+      background: transparent;
+      display: none;
+      z-index: 100;
       touch-action: manipulation;
     }
 
-    button.control.show {
+    #resetHotspot.active {
       display: block;
-    }
-
-    button.control:active {
-      transform: translateY(4px);
-      box-shadow: 0 2px 0 rgba(0,0,0,0.18);
     }
   </style>
 </head>
 
 <body>
-  <header>
-    <h1>みるみる</h1>
-    <div id="message">ひよこをおしてね</div>
-  </header>
-
   <main id="game">
     <div id="resultMark">⭕️</div>
 
@@ -221,16 +178,14 @@
     </button>
   </main>
 
-  <div id="controls">
-    <button class="control" id="resetBtn" onclick="resetGame()">もういっかい</button>
-  </div>
+  <!-- 正解後だけ有効になる、見えないリセットボタン -->
+  <button id="resetHotspot" onclick="resetGame()" aria-label="もういっかい"></button>
 
   <script>
     const target = document.getElementById("target");
     const game = document.getElementById("game");
-    const message = document.getElementById("message");
-    const resetBtn = document.getElementById("resetBtn");
     const resultMark = document.getElementById("resultMark");
+    const resetHotspot = document.getElementById("resetHotspot");
 
     const obstacles = [
       document.getElementById("ob0"),
@@ -248,9 +203,8 @@
     function startGame() {
       if (isMoving || isHidden) return;
 
-      resetBtn.classList.remove("show");
-      message.classList.remove("correct");
       resultMark.classList.remove("show");
+      resetHotspot.classList.remove("active");
       resetObstaclesOnly();
 
       isMoving = true;
@@ -259,7 +213,6 @@
 
       target.style.opacity = "1";
       target.style.pointerEvents = "none";
-      message.textContent = "よくみてね";
 
       obstacles.forEach(ob => ob.classList.add("disabled"));
 
@@ -280,10 +233,10 @@
       const gameRect = game.getBoundingClientRect();
       const targetSize = target.offsetWidth;
 
-      const minX = 16;
-      const maxX = gameRect.width - 16;
-      const minY = 70;
-      const maxY = gameRect.height * 0.52;
+      const minX = 18;
+      const maxX = gameRect.width - 18;
+      const minY = 80;
+      const maxY = gameRect.height * 0.58;
 
       const x = random(minX + targetSize / 2, maxX - targetSize / 2);
       const y = random(minY, maxY);
@@ -308,7 +261,6 @@
         target.style.opacity = "0";
         isMoving = false;
         isHidden = true;
-        message.textContent = "どこかな？";
         obstacles.forEach(ob => ob.classList.remove("disabled"));
       }, 250);
     }
@@ -330,17 +282,13 @@
         target.style.top = centerY + "px";
         target.style.opacity = "1";
 
-        message.textContent = "せいかい！";
-        message.classList.add("correct");
         resultMark.classList.add("show");
 
         isHidden = false;
         target.style.pointerEvents = "auto";
         obstacles.forEach(ob => ob.classList.add("disabled"));
 
-        resetBtn.classList.add("show");
-      } else {
-        message.textContent = "いないよ";
+        resetHotspot.classList.add("active");
       }
     }
 
@@ -352,16 +300,14 @@
       hiddenIndex = null;
 
       target.style.left = "50%";
-      target.style.top = "16%";
+      target.style.top = "15%";
       target.style.opacity = "1";
       target.style.pointerEvents = "auto";
 
       resetObstaclesOnly();
 
-      message.textContent = "ひよこをおしてね";
-      message.classList.remove("correct");
       resultMark.classList.remove("show");
-      resetBtn.classList.remove("show");
+      resetHotspot.classList.remove("active");
     }
 
     function resetObstaclesOnly() {
