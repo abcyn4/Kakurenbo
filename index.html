@@ -35,13 +35,18 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 6px;
+
+      /* HDMI出力・テレビ表示で見切れないように四方の余白を広めにする */
+      padding: clamp(28px, 4vw, 56px);
     }
 
     #game {
       position: relative;
-      width: min(98vw, calc(98vh * 4 / 3), 1300px);
+
+      /* テレビ出力時に端が切れにくいよう、画面いっぱいにしすぎない */
+      width: min(90vw, calc(90vh * 4 / 3), 1180px);
       aspect-ratio: 4 / 3;
+
       background: #fffdf2;
       border: 10px solid #ffd166;
       border-radius: 34px;
@@ -54,7 +59,7 @@
       left: 50%;
       top: 30%;
       transform: translate(-50%, -50%);
-      font-size: clamp(230px, 34vw, 500px);
+      font-size: clamp(210px, 30vw, 450px);
       line-height: 1;
       z-index: 30;
       display: none;
@@ -69,17 +74,17 @@
     #target {
       position: absolute;
       left: 50%;
-      top: 16%;
+      top: 18%;
       transform: translate(-50%, -50%);
-      width: clamp(100px, 12vw, 175px);
-      height: clamp(100px, 12vw, 175px);
+      width: clamp(90px, 11vw, 160px);
+      height: clamp(90px, 11vw, 160px);
       border-radius: 50%;
       background: #ffef99;
       border: 5px solid #f4a261;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(64px, 8.5vw, 124px);
+      font-size: clamp(58px, 8vw, 112px);
       box-shadow: 0 8px 0 rgba(0,0,0,0.18);
       z-index: 5;
       cursor: pointer;
@@ -94,8 +99,8 @@
 
     .obstacle {
       position: absolute;
-      bottom: 6%;
-      width: 25%;
+      bottom: 8%;
+      width: 23%;
       aspect-ratio: 1 / 1;
       border: 0;
       background: transparent;
@@ -111,9 +116,9 @@
       transform: translateY(5px);
     }
 
-    #ob0 { left: 5%; }
-    #ob1 { left: 37.5%; }
-    #ob2 { left: 70%; }
+    #ob0 { left: 6%; }
+    #ob1 { left: 38.5%; }
+    #ob2 { left: 71%; }
 
     .shapeSvg {
       width: 100%;
@@ -286,12 +291,20 @@
       const gameRect = game.getBoundingClientRect();
       const targetSize = target.offsetWidth;
 
-      const minX = 18;
-      const maxX = gameRect.width - 18;
-      const minY = 80;
-      const maxY = gameRect.height * 0.55;
+      /*
+        ひよこが端で見切れないように、
+        ひよこの半径＋余白を確保して動かす
+      */
+      const safeMargin = 28;
+      const halfTarget = targetSize / 2;
 
-      const x = random(minX + targetSize / 2, maxX - targetSize / 2);
+      const minX = halfTarget + safeMargin;
+      const maxX = gameRect.width - halfTarget - safeMargin;
+
+      const minY = halfTarget + safeMargin;
+      const maxY = gameRect.height * 0.54;
+
+      const x = random(minX, maxX);
       const y = random(minY, maxY);
 
       target.style.left = x + "px";
@@ -356,7 +369,7 @@
       hiddenIndex = null;
 
       target.style.left = "50%";
-      target.style.top = "16%";
+      target.style.top = "18%";
       target.style.opacity = "1";
       target.style.pointerEvents = "auto";
 
