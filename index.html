@@ -110,6 +110,7 @@
       cursor: pointer;
       touch-action: manipulation;
       padding: 0;
+      transition: left 0.35s ease, transform 0.25s, opacity 0.25s;
     }
 
     .obstacle:active {
@@ -155,6 +156,24 @@
     #resetHotspot.active {
       display: block;
     }
+
+    /* ひよこが隠れたあとだけ有効になる、左上の見えないシャッフルエリア */
+    #shuffleHotspot {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 180px;
+      height: 180px;
+      border: 0;
+      background: transparent;
+      display: none;
+      z-index: 100;
+      touch-action: manipulation;
+    }
+
+    #shuffleHotspot.active {
+      display: block;
+    }
   </style>
 </head>
 
@@ -186,11 +205,15 @@
   <!-- 正解後だけ有効になる、見えないリセットボタン -->
   <button id="resetHotspot" onclick="resetGame()" aria-label="もういっかい"></button>
 
+  <!-- 隠れたあとだけ有効になる、見えないシャッフルボタン -->
+  <button id="shuffleHotspot" onclick="shuffleObstacles()" aria-label="いどう"></button>
+
   <script>
     const target = document.getElementById("target");
     const game = document.getElementById("game");
     const resultMark = document.getElementById("resultMark");
     const resetHotspot = document.getElementById("resetHotspot");
+    const shuffleHotspot = document.getElementById("shuffleHotspot");
 
     const obstacles = [
       document.getElementById("ob0"),
@@ -198,10 +221,14 @@
       document.getElementById("ob2")
     ];
 
+    const obstaclePositions = ["6%", "38.5%", "71%"];
+
     let hiddenIndex = null;
     let isMoving = false;
     let isHidden = false;
+    let isShuffling = false;
     let moveTimer = null;
+    let piyoTimer = null;
 
     /* 音声ファイルなしで効果音を作る設定 */
     let audioCtx = null;
@@ -244,13 +271,60 @@
       }, 100);
     }
 
-    function playCorrectSound() {
-      // ピンポン
-      playTone(880, 0.14, "sine", 0.15);
+    function playPiyoSound() {
+      // ピヨピヨ
+      playTone(1250, 0.07, "triangle", 0.08);
 
       setTimeout(() => {
-        playTone(660, 0.22, "sine", 0.15);
-      }, 150);
+        playTone(1500, 0.08, "triangle", 0.08);
+      }, 85);
+    }
+
+    function startPiyoLoop() {
+      stopPiyoLoop();
+
+      playPiyoSound();
+
+      piyoTimer = setInterval(() => {
+        playPiyoSound();
+      }, 520);
+    }
+
+    function stopPiyoLoop() {
+      if (piyoTimer) {
+        clearInterval(piyoTimer);
+        piyoTimer = null;
+      }
+    }
+
+    function playCorrectSound() {
+      // 高めのピンポンピンポン
+      playTone(1175, 0.12, "sine", 0.15);
+
+      setTimeout(() => {
+        playTone(880, 0.18, "sine", 0.15);
+      }, 135);
+
+      setTimeout(() => {
+        playTone(1175, 0.12, "sine", 0.15);
+      }, 360);
+
+      setTimeout(() => {
+        playTone(880, 0.22, "sine", 0.15);
+      }, 495);
+    }
+
+    function playShuffleSound() {
+      // 左上タップ時の移動音
+      playTone(700, 0.07, "square", 0.08);
+
+      setTimeout(() => {
+        playTone(940, 0.07, "square", 0.08);
+      }, 90);
+
+      setTimeout(() => {
+        playTone(1180, 0.09, "square", 0.08);
+      }, 180);
     }
 
     target.addEventListener("click", startGame);
@@ -263,16 +337,21 @@
 
       resultMark.classList.remove("show");
       resetHotspot.classList.remove("active");
+      shuffleHotspot.classList.remove("active");
       resetObstaclesOnly();
+      resetObstaclePositions();
 
       isMoving = true;
       isHidden = false;
+      isShuffling = false;
       hiddenIndex = null;
 
       target.style.opacity = "1";
       target.style.pointerEvents = "none";
 
       obstacles.forEach(ob => ob.classList.add("disabled"));
+
+      startPiyoLoop();
 
       let count = 0;
 
@@ -282,6 +361,8 @@
 
         if (count >= 12) {
           clearInterval(moveTimer);
+          moveTimer = null;
+          stopPiyoLoop();
           hideTarget();
         }
       }, 250);
@@ -313,59 +394,131 @@
 
     function hideTarget() {
       hiddenIndex = Math.floor(Math.random() * 3);
-      const ob = obstacles[hiddenIndex];
-      const obRect = ob.getBoundingClientRect();
-      const gameRect = game.getBoundingClientRect();
-
-      const centerX = obRect.left - gameRect.left + obRect.width / 2;
-      const centerY = obRect.top - gameRect.top + obRect.height / 2;
-
-      target.style.left = centerX + "px";
-      target.style.top = centerY + "px";
+      moveTargetToObstacle(hiddenIndex);
 
       setTimeout(() => {
         target.style.opacity = "0";
         isMoving = false;
         isHidden = true;
         obstacles.forEach(ob => ob.classList.remove("disabled"));
+        shuffleHotspot.classList.add("active");
       }, 250);
     }
 
     function openObstacle(index) {
-      if (!isHidden || isMoving) return;
+      if (!isHidden || isMoving || isShuffling) return;
 
       unlockAudio();
 
-      const ob = obstacles[index];
-      const obRect = ob.getBoundingClientRect();
-      const gameRect = game.getBoundingClientRect();
-
-      const centerX = obRect.left - gameRect.left + obRect.width / 2;
-      const centerY = obRect.top - gameRect.top + obRect.height / 2;
+      const center = getObstacleCenter(index);
 
       obstacles[index].classList.add("removed");
 
       if (index === hiddenIndex) {
-        target.style.left = centerX + "px";
-        target.style.top = centerY + "px";
+        target.style.left = center.x + "px";
+        target.style.top = center.y + "px";
         target.style.opacity = "1";
 
         resultMark.classList.add("show");
         playCorrectSound();
 
         isHidden = false;
-        target.style.pointerEvents = "auto";
+
+        /* 正解後は、ひよこを押しても再スタートしない */
+        target.style.pointerEvents = "none";
+
         obstacles.forEach(ob => ob.classList.add("disabled"));
 
+        shuffleHotspot.classList.remove("active");
         resetHotspot.classList.add("active");
       }
     }
 
+    function shuffleObstacles() {
+      if (!isHidden || isMoving || isShuffling || hiddenIndex === null) return;
+
+      unlockAudio();
+      playShuffleSound();
+
+      isShuffling = true;
+      obstacles.forEach(ob => ob.classList.add("disabled"));
+
+      const newPositions = shuffledPositions();
+
+      obstacles.forEach((ob, index) => {
+        ob.style.left = newPositions[index];
+      });
+
+      /*
+        障害物の移動アニメーション後に、
+        隠れているひよこも同じ障害物の中心へ移動させる
+      */
+      setTimeout(() => {
+        moveTargetToObstacle(hiddenIndex);
+        target.style.opacity = "0";
+
+        isShuffling = false;
+        obstacles.forEach(ob => ob.classList.remove("disabled"));
+      }, 380);
+    }
+
+    function shuffledPositions() {
+      const positions = [...obstaclePositions];
+
+      for (let i = positions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [positions[i], positions[j]] = [positions[j], positions[i]];
+      }
+
+      /*
+        たまたま元の位置と完全一致した場合は、
+        1つずらして必ず変化が出るようにする
+      */
+      const current = obstacles.map(ob => ob.style.left || getDefaultLeft(ob.id));
+
+      if (positions.every((pos, index) => pos === current[index])) {
+        positions.push(positions.shift());
+      }
+
+      return positions;
+    }
+
+    function getDefaultLeft(id) {
+      if (id === "ob0") return "6%";
+      if (id === "ob1") return "38.5%";
+      return "71%";
+    }
+
+    function resetObstaclePositions() {
+      obstacles[0].style.left = "6%";
+      obstacles[1].style.left = "38.5%";
+      obstacles[2].style.left = "71%";
+    }
+
+    function moveTargetToObstacle(index) {
+      const center = getObstacleCenter(index);
+      target.style.left = center.x + "px";
+      target.style.top = center.y + "px";
+    }
+
+    function getObstacleCenter(index) {
+      const ob = obstacles[index];
+      const obRect = ob.getBoundingClientRect();
+      const gameRect = game.getBoundingClientRect();
+
+      return {
+        x: obRect.left - gameRect.left + obRect.width / 2,
+        y: obRect.top - gameRect.top + obRect.height / 2
+      };
+    }
+
     function resetGame() {
       clearInterval(moveTimer);
+      stopPiyoLoop();
 
       isMoving = false;
       isHidden = false;
+      isShuffling = false;
       hiddenIndex = null;
 
       target.style.left = "50%";
@@ -374,9 +527,11 @@
       target.style.pointerEvents = "auto";
 
       resetObstaclesOnly();
+      resetObstaclePositions();
 
       resultMark.classList.remove("show");
       resetHotspot.classList.remove("active");
+      shuffleHotspot.classList.remove("active");
     }
 
     function resetObstaclesOnly() {
